@@ -39,6 +39,10 @@ class PhotoStore {
     }
     
     func fetchUIImageFromPhotoData(photo: Photo, completion: @escaping (ImageResult) -> Void) {
+        if let image = photo.getImage() {
+            completion(.Success(image))
+            return
+        }
         let request = URLRequest(url: photo.getRemoteURL())
         let task = session.dataTask(with: request, completionHandler: {
             (data, response, error) in

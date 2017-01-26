@@ -41,6 +41,10 @@ class Photo {
         return dateTaken as Date
     }
     
+    public func getImage() -> UIImage? {
+        return image
+    }
+    
     // MARK: Setters
     public func setImage(image: UIImage?) {
         self.image = image

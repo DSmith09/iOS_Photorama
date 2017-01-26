@@ -8,37 +8,44 @@
 
 import UIKit
 
-class PhotosViewController: UIViewController {
+class PhotosViewController: UIViewController, UICollectionViewDelegate {
+    @IBOutlet var collectionView: UICollectionView!
     
-    @IBOutlet var imageView: UIImageView!
     var store: PhotoStore!
+    var photoDataSource: PhotoDataSource!
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        collectionView.dataSource = photoDataSource
+        collectionView.delegate = self
         store.fetchRecentPhotos() {
             (photosResult) -> Void in
             switch photosResult {
             case let .Success(photos):
                     print("Successfully found \(photos.count) recent photos")
-                    if let firstPhoto = photos.first {
-                        self.store.fetchUIImageFromPhotoData(photo: firstPhoto) {
-                            (imageResult) -> Void in
-                            switch imageResult {
-                            case let .Success(image):
-                                    print("Successfully downloaded image for photo: \(firstPhoto.getTitle())")
-                                    OperationQueue.main.addOperation({
-                                        self.imageView.image = image
-                                    })
-                            case let .Failure(error):
-                                print("Failed to download image for photo: \(firstPhoto.getTitle()); Error is: \(error)")
-                            }
-                        }
-                }
+                    OperationQueue.main.addOperation({
+                        self.photoDataSource.photos = photos
+                        self.collectionView.reloadSections(IndexSet.init(integer: 0))
+                    })
             case let .Failure(error):
                 print("Error fetching recent photos: \(error)")
             }
         }
-        // Do any additional setup after loading the view.
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        let photo = photoDataSource.photos[indexPath.row]
+        store.fetchUIImageFromPhotoData(photo: photo, completion: {
+            (imageResult) -> Void in
+            switch (imageResult) {
+            case let .Success(image):
+                if let cell = self.collectionView.cellForItem(at: indexPath) as? PhotoCollectionViewCell {
+                    cell.updateWithImage(image: image)
+                }
+            case let .Failure(error):
+                print("Failed to download imageData for photo: \(photo.getTitle()); Error is: \(error)")
+            }
+        })
     }
 
     override func didReceiveMemoryWarning() {
@@ -47,14 +54,16 @@ class PhotosViewController: UIViewController {
     }
     
 
-    /*
     // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         // Get the new view controller using segue.destinationViewController.
         // Pass the selected object to the new view controller.
+        if segue.identifier == "ShowPhoto" {
+            if let selectedIndexPath = collectionView.indexPathsForSelectedItems?.first {
+                let destinationVC = segue.destination as! PhotoInfoViewController
+                destinationVC.photo = photoDataSource.photos[selectedIndexPath.row]
+                destinationVC.store = store
+            }
+        }
     }
-    */
-
 }
